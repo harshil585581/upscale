@@ -11,7 +11,7 @@ import io
 app = Flask(__name__)
 app.config["PROPAGATE_EXCEPTIONS"] = True
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, origins=["*", "null"])
 
 SCALE_FACTOR = 4
 
@@ -85,4 +85,4 @@ def handle_error(e):
 if __name__ == "__main__":
     os.makedirs("temp", exist_ok=True)
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port)

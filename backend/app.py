@@ -24,7 +24,7 @@ CORS(app, resources={r"/*": {
 
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB
 
-SCALE_FACTOR = 4
+SCALE_FACTOR = 2
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 
 

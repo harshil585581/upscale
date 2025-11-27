@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Image Upscaler</title>
+    <style>
+      body {
+        font-family: Arial;
+        text-align: center;
+        padding: 40px;
+      }
+      .box {
+        border: 1px solid #ccc;
+        width: 350px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 10px;
+      }
+      #loader {
+        display: none;
+        font-size: 18px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Upscale Images</h2>
+
+    <div class="box">
+      <input type="file" id="zipFile" accept=".zip" />
+      <button id="uploadBtn">Upscale ZIP</button>
+      <div id="loader">Processing...</div>
+    </div>
+
+    <script>
+      console.log("THIS IS THE CORRECT FILE LOADED");
+      document.getElementById("zipFile").addEventListener("change", () => {
+        console.log("FILE SELECTED!");
+      });
+      document.getElementById("uploadBtn").addEventListener("click", () => {
+        console.log("UPLOAD BUTTON CLICKED!");
+      });
+
+      document.getElementById("uploadBtn").addEventListener("click", uploadZip);
+
+      async function uploadZip() {
+        const fileInput = document.getElementById("zipFile");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          alert("Please choose a ZIP file");
+          return;
+        }
+
+        document.getElementById("loader").style.display = "block";
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        console.log("Uploading to backend...");
+
+        const response = await fetch("http://127.0.0.1:5000/upscale", {
+          method: "POST",
+          body: formData,
+        });
+
+        console.log("Backend response status:", response.status);
+
+        if (!response.ok) {
+          alert("Backend error: " + response.status);
+          document.getElementById("loader").style.display = "none";
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "upscaled_images.zip";
+        a.click();
+        URL.revokeObjectURL(url);
+
+        document.getElementById("loader").style.display = "none";
+      }
+    </script>
+  </body>
+</html>

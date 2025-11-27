@@ -14,7 +14,11 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB upload max
-CORS(app, resources={r"/*": {"origins": ["*", "null"]}})
+CORS(app, resources={r"/*": {
+    "origins": ["*", "null"],
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": "*"
+}})
 
 SCALE_FACTOR = 4
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}

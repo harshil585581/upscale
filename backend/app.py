@@ -9,16 +9,20 @@ from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 from PIL import Image, ImageFile
 
-# Allow partial and large images in streaming mode
+# Allow partial and large images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB upload max
+
+# 🔥 UNIVERSAL CORS (works for localhost, file://, Render, everything)
 CORS(app, resources={r"/*": {
-    "origins": ["*", "null"],
+    "origins": "*",
+    "allow_headers": "*",
+    "expose_headers": "*",
     "methods": ["GET", "POST", "OPTIONS"],
-    "allow_headers": "*"
-}})
+}}, supports_credentials=False)
+
+app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB
 
 SCALE_FACTOR = 4
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
@@ -34,7 +38,6 @@ def index():
     return jsonify({"status": "ok", "note": "Upscale API running"})
 
 
-
 @app.post("/upscale")
 def upscale_zip():
     print("---- /upscale HIT ----")
@@ -47,7 +50,7 @@ def upscale_zip():
         uploaded = request.files["file"]
         print("Uploaded filename:", uploaded.filename)
 
-        # Temp root directory
+        # Temp directory
         temp_root = tempfile.mkdtemp(prefix="upscale_")
         print("Temp directory:", temp_root)
 
@@ -56,12 +59,12 @@ def upscale_zip():
         os.makedirs(input_dir, exist_ok=True)
         os.makedirs(output_dir, exist_ok=True)
 
-        # Save ZIP to disk
+        # Save uploaded ZIP
         uploaded_zip_path = os.path.join(temp_root, "uploaded.zip")
         uploaded.save(uploaded_zip_path)
         print("ZIP saved at:", uploaded_zip_path)
 
-        # Try extracting
+        # Extract ZIP
         try:
             with zipfile.ZipFile(uploaded_zip_path, "r") as z:
                 print("ZIP entries:", z.namelist())
@@ -70,10 +73,9 @@ def upscale_zip():
             print("❌ ZIP EXTRACT ERROR:", e)
             raise
 
-        # List extracted files
         print("Extracted files:", os.listdir(input_dir))
 
-        # PROCESS images
+        # Process each image
         for fname in os.listdir(input_dir):
             print("Processing:", fname)
             if not is_image_filename(fname):
@@ -87,24 +89,26 @@ def upscale_zip():
                     print("Opened image:", fname, img.size)
 
                     img = img.convert("RGB")
-                    new_w = img.width * SCALE_FACTOR
-                    new_h = img.height * SCALE_FACTOR
-                    upscaled = img.resize((new_w, new_h), Image.LANCZOS)
+                    new_size = (img.width * SCALE_FACTOR, img.height * SCALE_FACTOR)
+                    upscaled = img.resize(new_size, Image.LANCZOS)
 
                     out_name = f"image_{uuid.uuid4().hex}.jpg"
                     out_path = os.path.join(output_dir, out_name)
                     upscaled.save(out_path, "JPEG", quality=90)
                     print("Saved:", out_path)
 
+                del upscaled
             except Exception as e:
                 print("❌ IMAGE ERROR:", e)
                 raise
+            finally:
+                gc.collect()
 
         # Create output ZIP
         output_zip_path = os.path.join(temp_root, "upscaled_images.zip")
-        with zipfile.ZipFile(output_zip_path, "w") as zout:
-            for file in os.listdir(output_dir):
-                zout.write(os.path.join(output_dir, file), file)
+        with zipfile.ZipFile(output_zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zout:
+            for out_file in os.listdir(output_dir):
+                zout.write(os.path.join(output_dir, out_file), arcname=out_file)
 
         print("ZIP ready:", output_zip_path)
 
@@ -121,7 +125,6 @@ def upscale_zip():
         print("\n❌ GLOBAL ERROR:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
 
 
 if __name__ == "__main__":
